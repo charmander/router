@@ -1,0 +1,43 @@
+{
+	"name": "@charmander/router",
+	"version": "0.1.0",
+	"description": "Matches a path against a pattern map, extracting values",
+	"bugs": "https://github.com/charmander/router/issues",
+	"license": "ISC",
+	"author": {
+		"name": "Charmander",
+		"email": "~@charmander.me",
+		"url": "https://charmander.me/"
+	},
+	"files": [
+		"index.js",
+		"route.js",
+		"pattern.js",
+		"types/capture-regex.js",
+		"types/type.js",
+		"types/id.js",
+		"types/text.js",
+		"internal/extend.js",
+		"internal/pattern.js",
+		"internal/try-add.js",
+		"npm-shrinkwrap.json"
+	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/charmander/router"
+	},
+	"dependencies": {
+		"escape-string-regexp": "1.0.5",
+		"reflect-type-3": "1.0.0"
+	},
+	"devDependencies": {
+		"@charmander/eslint-config-base": "1.0.3",
+		"tap": "^11.0.1"
+	},
+	"scripts": {
+		"test": "tap test"
+	},
+	"engines": {
+		"node": ">=8.0.0"
+	}
+}
