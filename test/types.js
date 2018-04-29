@@ -1,54 +1,45 @@
 'use strict';
 
-const tap = require('tap');
+const assert = require('assert');
+const test = require('@charmander/test')(module);
 
 const CaptureRegex = require('../types/capture-regex');
 
-tap.test('new types', t => {
-	t.test('can’t capture slashes', t => {
+test.group('new types', test => {
+	test('can’t capture slashes', () => {
 		const attempt = regex => () => {
 			void new CaptureRegex(regex);
 		};
 
-		const error = {
-			constructor: Error,
-			message: 'Capture’s pattern cannot match any strings containing slashes',
-		};
+		const error =
+			/^Error: Capture’s pattern cannot match any strings containing slashes$/;
 
-		t.throws(attempt(/\//), error);
-		t.throws(attempt(/[/]/), error);
-		t.throws(attempt(/\x2f/), error);
-		t.throws(attempt(/[\x2f]/), error);
-		t.throws(attempt(/\x2F/), error);
-		t.throws(attempt(/[\x2F]/), error);
-		t.throws(attempt(/\u002f/), error);
-		t.throws(attempt(/[\u002f]/), error);
-		t.throws(attempt(/[\x00-/]/), error);
-		t.throws(attempt(/[/-~]/), error);
-		t.throws(attempt(/./), error);
-		t.throws(attempt(/[^]/), error);
-		t.throws(attempt(/a(?:\/)/), error);
-		t.throws(attempt(/abc\/d/), error);
-		t.throws(attempt(/[\^/]/), error);
-
-		t.end();
+		assert.throws(attempt(/\//), error);
+		assert.throws(attempt(/[/]/), error);
+		assert.throws(attempt(/\x2f/), error);
+		assert.throws(attempt(/[\x2f]/), error);
+		assert.throws(attempt(/\x2F/), error);
+		assert.throws(attempt(/[\x2F]/), error);
+		assert.throws(attempt(/\u002f/), error);
+		assert.throws(attempt(/[\u002f]/), error);
+		assert.throws(attempt(/[\x00-/]/), error);
+		assert.throws(attempt(/[/-~]/), error);
+		assert.throws(attempt(/./), error);
+		assert.throws(attempt(/[^]/), error);
+		assert.throws(attempt(/a(?:\/)/), error);
+		assert.throws(attempt(/abc\/d/), error);
+		assert.throws(attempt(/[\^/]/), error);
 	});
 
-	t.test('can’t specify regex flags', t => {
-		t.throws(() => {
+	test('can’t specify regex flags', () => {
+		assert.throws(() => {
 			void new CaptureRegex(/[a-z]+/i);
-		}, {constructor: Error, message: 'Capture’s pattern cannot specify flags'});
-
-		t.end();
+		}, /^Error: Capture’s pattern cannot specify flags$/);
 	});
 
-	t.test('can’t be constructed from non-RegExp values', t => {
-		t.throws(() => {
+	test('can’t be constructed from non-RegExp values', () => {
+		assert.throws(() => {
 			void new CaptureRegex('[a-z]+');
-		}, {constructor: TypeError, message: 'CaptureRegex must be constructed from RegExp object'});
-
-		t.end();
+		}, /^TypeError: CaptureRegex must be constructed from RegExp object$/);
 	});
-
-	t.end();
 });

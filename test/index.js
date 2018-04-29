@@ -1,6 +1,7 @@
 'use strict';
 
-const tap = require('tap');
+const assert = require('assert');
+const test = require('@charmander/test')(module);
 
 const pattern = require('../pattern');
 const Pattern = require('../internal/pattern');
@@ -11,128 +12,129 @@ const CaptureRegex = require('../types/capture-regex');
 const id = require('../types/id');
 const text = require('../types/text');
 
-tap.test('pattern`` template string tag', t => {
-	t.test('produces patterns equivalent to the Pattern constructor', t => {
-		t.strictSame(
+test.group('pattern`` template string tag', test => {
+	test('produces patterns equivalent to the Pattern constructor', () => {
+		assert.deepStrictEqual(
 			pattern`/`,
 			new Pattern([], false),
 		);
 
-		t.strictSame(
+		assert.deepStrictEqual(
 			pattern`/about`,
 			new Pattern(['about'], false),
 		);
 
-		t.strictSame(
+		assert.deepStrictEqual(
 			pattern`/posts/`,
 			new Pattern(['posts'], true),
 		);
 
-		t.strictSame(
+		assert.deepStrictEqual(
 			pattern`/posts/${id('id')}`,
 			new Pattern(['posts', id('id')], false),
 		);
 
-		t.strictSame(
+		assert.deepStrictEqual(
 			pattern`/posts/${id('id')}/${text('slug')}`,
 			new Pattern(['posts', id('id'), text('slug')], false),
 		);
 
-		t.strictSame(
+		assert.deepStrictEqual(
 			pattern`/users/${text('username')}`,
 			new Pattern(['users', text('username')], false),
 		);
 
-		t.strictSame(
+		assert.deepStrictEqual(
 			pattern`/priority/static`,
 			new Pattern(['priority', 'static'], false),
 		);
 
-		t.end();
 	});
 
-	t.test('checks syntax', t => {
-		t.throws(() => {
+	test('checks syntax', () => {
+		assert.throws(() => {
 			void pattern`posts/${id('id')}`;
-		}, {constructor: SyntaxError, message: 'Pattern must begin with a slash'});
+		}, /^SyntaxError: Pattern must begin with a slash$/);
 
-		t.throws(() => {
+		assert.throws(() => {
 			void pattern`${id('id')}`;
-		}, {constructor: SyntaxError, message: 'Pattern must begin with a slash'});
+		}, /^SyntaxError: Pattern must begin with a slash$/);
 
-		t.throws(() => {
+		assert.throws(() => {
 			void pattern`/posts/post-${id('id')}`;
-		}, {constructor: SyntaxError, message: '${…} must be a complete path segment'});
+		}, /^SyntaxError: \${…} must be a complete path segment$/);
 
-		t.throws(() => {
+		assert.throws(() => {
 			void pattern`/posts/${id('id')}?`;
-		}, {constructor: SyntaxError, message: '${…} must be a complete path segment'});
+		}, /^SyntaxError: \${…} must be a complete path segment$/);
 
-		t.throws(() => {
+		assert.throws(() => {
 			void pattern`/posts/${id('id')}${text('text')}`;
-		}, {constructor: SyntaxError, message: '${…} must be a complete path segment'});
+		}, /^SyntaxError: \${…} must be a complete path segment$/);
+	});
+});
 
-		t.end();
+test.group('pattern constructor', test => {
+	test('checks capture name types', () => {
+		assert.throws(() => {
+			void new Pattern(['posts', {name: 1, regex: new CaptureRegex(/a/)}]);
+		}, /^TypeError: Capture name must be a string$/);
 	});
 
-	t.end();
+	test('checks capture regex types', () => {
+		assert.throws(() => {
+			void new Pattern(['posts', id]);
+		}, /^TypeError: Capture regex must be a CaptureRegex instance$/);
+
+		assert.throws(() => {
+			void new Pattern(['posts', {name: 'a', regex: /a/}]);
+		}, /^TypeError: Capture regex must be a CaptureRegex instance$/);
+	});
+
+	test('disallows duplicate capture names', () => {
+		assert.throws(() => {
+			void new Pattern(['posts', id('id'), id('id')]);
+		}, /^Error: Duplicate capture name: 'id'$/);
+	});
 });
 
-tap.test('pattern constructor', t => {
-	t.throws(() => {
-		void new Pattern(['posts', id]);
-	}, TypeError);
+test.group('route constructor', test => {
+	test('checks route name type', () => {
+		assert.throws(() => {
+			void new Route(null, pattern`/`);
+		}, /^TypeError: Route name must be a string$/);
+	});
 
-	t.throws(() => {
-		void new Pattern(['posts', {name: 1, regex: new CaptureRegex(/a/)}]);
-	}, {constructor: TypeError, message: 'Capture name must be a string'});
-
-	t.throws(() => {
-		void new Pattern(['posts', {name: 'a', regex: /a/}]);
-	}, {constructor: TypeError, message: 'Capture regex must be a CaptureRegex instance'});
-
-	t.throws(() => {
-		void new Pattern(['posts', id('id'), id('id')]);
-	}, {constructor: Error, message: "Duplicate capture name: 'id'"});
-
-	t.end();
+	test('checks route pattern type', () => {
+		assert.throws(() => {
+			void new Route('home', '/');
+		}, /^TypeError: Route pattern must be created with pattern`…`$/);
+	});
 });
 
-tap.test('route constructor', t => {
-	t.throws(() => {
-		void new Route(null, pattern`/`);
-	}, {constructor: TypeError, message: 'Route name must be a string'});
+test.group('type constructors', test => {
+	test('are not exposed directly', () => {
+		assert.strictEqual(id.prototype, undefined);
+	});
 
-	t.throws(() => {
-		void new Route('home', '/');
-	}, {constructor: TypeError, message: 'Route pattern must be created with pattern`…`'});
+	test('check argument types', () => {
+		assert.throws(() => {
+			id(1);
+		}, /^TypeError: Capture name must be a string$/);
 
-	t.end();
+		assert.throws(() => {
+			id(Object('id'));
+		}, /^TypeError: Capture name must be a string$/);
+	});
 });
 
-tap.test('type constructors', t => {
-	t.is(id.prototype, undefined, 'are not exposed directly');
-
-	t.throws(() => {
-		id(1);
-	}, {constructor: TypeError, message: 'Capture name must be a string'});
-
-	t.throws(() => {
-		id(Object('id'));
-	}, {constructor: TypeError, message: 'Capture name must be a string'});
-
-	t.end();
-});
-
-tap.test('duplicate route names throw', t => {
-	t.throws(() => {
+test('duplicate route names throw', () => {
+	assert.throws(() => {
 		void new Router([
 			new Route('home', pattern`/`),
 			new Route('home', pattern`/`),
 		]);
-	}, {constructor: Error, message: "Duplicate route name: 'home'"});
-
-	t.end();
+	}, /^Error: Duplicate route name: 'home'$/);
 });
 
 const router = new Router([
@@ -189,157 +191,146 @@ const TEXT = [
 	'posts',
 ];
 
-tap.test('static routes', t => {
+test('static routes', () => {
 	['/', '/?a=b', '/?a=b/', '/??'].forEach(path => {
 		const match = router.match(path);
-		t.strictSame(match.captures, {});
-		t.is(match.route.name, 'home');
+		assert.deepStrictEqual(match.captures, {});
+		assert.strictEqual(match.route.name, 'home');
 	});
 
-	t.is(router.match('//'), null);
+	assert.strictEqual(router.match('//'), null);
 
 	SUFFIXES.forEach(suffix => {
 		{
 			const match = router.match('/about' + suffix);
-			t.strictSame(match.captures, {});
-			t.is(match.route.name, 'about');
+			assert.deepStrictEqual(match.captures, {});
+			assert.strictEqual(match.route.name, 'about');
 		}
 
 		{
 			const match = router.match('/posts' + suffix);
-			t.strictSame(match.captures, {});
-			t.is(match.route.name, 'post-list');
+			assert.deepStrictEqual(match.captures, {});
+			assert.strictEqual(match.route.name, 'post-list');
 		}
 	});
 
-	t.end();
 });
 
-tap.test('id captures', t => {
+test('id captures', () => {
 	SUFFIXES.forEach(suffix => {
 		IDS.forEach(idTest => {
 			const match = router.match('/posts/' + idTest.text + suffix);
-			t.strictSame(match.captures, {id: idTest.value});
-			t.is(match.route.name, 'post');
+			assert.deepStrictEqual(match.captures, {id: idTest.value});
+			assert.strictEqual(match.route.name, 'post');
 		});
 
 		NON_IDS.forEach(text => {
-			t.is(router.match('/posts/' + text + suffix), null);
+			assert.strictEqual(router.match('/posts/' + text + suffix), null);
 		});
 	});
 
-	t.is(router.match('/posts//'), null);
-	t.end();
+	assert.strictEqual(router.match('/posts//'), null);
 });
 
-tap.test('text captures', t => {
+test('text captures', () => {
 	SUFFIXES.forEach(suffix => {
 		TEXT.forEach(text => {
 			{
 				const match = router.match('/users/' + text + suffix);
-				t.strictSame(match.captures, {username: text});
-				t.is(match.route.name, 'user');
+				assert.deepStrictEqual(match.captures, {username: text});
+				assert.strictEqual(match.route.name, 'user');
 			}
 
 			{
 				const match = router.match('/items/' + text + suffix);
-				t.strictSame(match.captures, {username: text});
-				t.is(match.route.name, 'items');
+				assert.deepStrictEqual(match.captures, {username: text});
+				assert.strictEqual(match.route.name, 'items');
 			}
 		});
 	});
 
-	t.is(router.match('/users'), null);
-	t.is(router.match('/users/'), null);
-	t.is(router.match('/users//'), null);
+	assert.strictEqual(router.match('/users'), null);
+	assert.strictEqual(router.match('/users/'), null);
+	assert.strictEqual(router.match('/users//'), null);
 
-	t.is(router.match('/items'), null);
-	t.is(router.match('/items/'), null);
-	t.is(router.match('/items//'), null);
+	assert.strictEqual(router.match('/items'), null);
+	assert.strictEqual(router.match('/items/'), null);
+	assert.strictEqual(router.match('/items//'), null);
 
-	t.end();
 });
 
-tap.test('combined captures', t => {
+test('combined captures', () => {
 	SUFFIXES.forEach(suffix => {
 		IDS.forEach(idTest => {
 			TEXT.forEach(text => {
 				const match = router.match('/posts/' + idTest.text + '/' + text + suffix);
-				t.strictSame(match.captures, {id: idTest.value, slug: text});
-				t.is(match.route.name, 'post-slug');
+				assert.deepStrictEqual(match.captures, {id: idTest.value, slug: text});
+				assert.strictEqual(match.route.name, 'post-slug');
 			});
 		});
 
 		NON_IDS.forEach(nonId => {
 			TEXT.forEach(text => {
-				t.is(router.match('/posts/' + nonId + '/' + text + suffix), null);
+				assert.strictEqual(router.match('/posts/' + nonId + '/' + text + suffix), null);
 			});
 		});
 
 		TEXT.forEach(text => {
-			t.is(router.match('/posts//' + text + suffix), null);
+			assert.strictEqual(router.match('/posts//' + text + suffix), null);
 		});
 	});
 
 	IDS.forEach(idTest => {
-		t.is(router.match('/posts/' + idTest.text + '//'), null);
+		assert.strictEqual(router.match('/posts/' + idTest.text + '//'), null);
 	});
 
-	t.is(router.match('/posts///'), null);
-	t.end();
+	assert.strictEqual(router.match('/posts///'), null);
 });
 
-tap.test('priority', t => {
-	t.test('is in route order for captures', t => {
+test.group('priority', test => {
+	test('is in route order for captures', () => {
 		{
 			const match = router.match('/priority/1');
-			t.strictSame(match.captures, {id: 1});
-			t.is(match.route.name, 'priority-id');
+			assert.deepStrictEqual(match.captures, {id: 1});
+			assert.strictEqual(match.route.name, 'priority-id');
 		}
 
 		{
 			const match = router.match('/priority/-');
-			t.strictSame(match.captures, {text: '-'});
-			t.is(match.route.name, 'priority-text');
+			assert.deepStrictEqual(match.captures, {text: '-'});
+			assert.strictEqual(match.route.name, 'priority-text');
 		}
 
 		{
 			const match = router.match('/priority2/1');
-			t.strictSame(match.captures, {text: '1'});
-			t.is(match.route.name, 'priority2-text');
+			assert.deepStrictEqual(match.captures, {text: '1'});
+			assert.strictEqual(match.route.name, 'priority2-text');
 		}
 
 		{
 			const match = router.match('/priority2/-');
-			t.strictSame(match.captures, {text: '-'});
-			t.is(match.route.name, 'priority2-text');
+			assert.deepStrictEqual(match.captures, {text: '-'});
+			assert.strictEqual(match.route.name, 'priority2-text');
 		}
-
-		t.end();
 	});
 
-	t.test('prefers entirely static matches', t => {
+	test('prefers entirely static matches', () => {
 		const match = router.match('/priority/static');
-		t.strictSame(match.captures, {});
-		t.is(match.route.name, 'priority-static');
-		t.end();
+		assert.deepStrictEqual(match.captures, {});
+		assert.strictEqual(match.route.name, 'priority-static');
 	});
-
-	t.end();
 });
 
-tap.test('reverse', t => {
-	t.is(router.reverse('home'), '/');
-	t.is(router.reverse('about'), '/about');
-	t.is(router.reverse('post-list'), '/posts/');
-	t.is(router.reverse('post', [1]), '/posts/1');
-	t.is(router.reverse('post-slug', [1, 'title']), '/posts/1/title');
-	t.is(router.reverse('user', ['username']), '/users/username');
-	t.is(router.reverse('items', ['username']), '/items/username/');
+test('reverse', () => {
+	assert.strictEqual(router.reverse('home'), '/');
+	assert.strictEqual(router.reverse('about'), '/about');
+	assert.strictEqual(router.reverse('post-list'), '/posts/');
+	assert.strictEqual(router.reverse('post', [1]), '/posts/1');
+	assert.strictEqual(router.reverse('post-slug', [1, 'title']), '/posts/1/title');
+	assert.strictEqual(router.reverse('user', ['username']), '/users/username');
+	assert.strictEqual(router.reverse('items', ['username']), '/items/username/');
 
-	t.throws(() => {
+	assert.throws(() => {
 		router.reverse('unknown');
-	}, {constructor: Error, message: "Unknown route 'unknown'"});
-
-	t.end();
+	}, /^Error: Unknown route 'unknown'$/);
 });
